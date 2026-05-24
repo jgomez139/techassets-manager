@@ -1,0 +1,391 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ======================================================
+// Prisma Schema - TechAssets Manager
+// ======================================================
+
+// ======================================================
+// ENUMS
+// ======================================================
+
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+  VIEWER
+}
+
+enum AssetStatus {
+  IN_USE
+  IN_STORAGE
+  UNDER_REPAIR
+  DISPOSED
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+}
+
+enum MaintenanceStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+}
+
+enum DocumentType {
+  INVOICE
+  WARRANTY
+  MANUAL
+  OTHER
+}
+
+enum DisposalReason {
+  IRREPARABLE_DAMAGE
+  OBSOLETE
+  LOST
+  STOLEN
+  OTHER
+}
+
+// ======================================================
+// USERS
+// ======================================================
+
+model User {
+  id       String   @id @default(cuid())
+  name     String
+  email    String   @unique
+  password String
+  role     UserRole @default(VIEWER)
+  phone    String?
+  avatar   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  maintenances Maintenance[]
+  auditLogs    AuditLog[]
+
+  // Relación inversa con RefreshToken
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+// ======================================================
+// CATEGORIES
+// ======================================================
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assets Asset[]
+
+  @@map("categories")
+}
+
+// ======================================================
+// EMPLOYEES
+// ======================================================
+
+model Employee {
+  id         String  @id @default(cuid())
+  name       String
+  email      String  @unique
+  phone      String?
+  position   String
+  department String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments Assignment[]
+  loans       Loan[]
+
+  @@map("employees")
+}
+
+// ======================================================
+// ASSETS
+// ======================================================
+
+model Asset {
+  id String @id @default(cuid())
+
+  // Información básica
+  name          String
+  brand         String
+  model         String
+  serialNumber  String @unique
+  inventoryCode String @unique
+
+  status AssetStatus @default(IN_STORAGE)
+
+  description String?
+
+  // Relación categoría
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  // Información compra
+  purchaseDate  DateTime?
+  supplier      String?
+  invoiceNumber String?
+  purchaseCost  Float?
+
+  // Garantía
+  warrantyMonths     Int?
+  warrantyExpiration DateTime?
+
+  // Eliminación lógica
+  isDeleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  specifications Specification?
+  assignments    Assignment[]
+  maintenances   Maintenance[]
+  documents      Document[]
+  loans          Loan[]
+  disposal       Disposal?
+  notifications  Notification[]
+
+  @@map("assets")
+}
+
+// ======================================================
+// SPECIFICATIONS
+// ======================================================
+
+model Specification {
+  id String @id @default(cuid())
+
+  assetId String @unique
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  // Computadores
+  ram             String?
+  storage         String?
+  processor       String?
+  operatingSystem String?
+
+  // Celulares
+  imei String?
+
+  // Impresoras
+  printerType  String?
+  connectivity String?
+
+  // Red
+  ports Int?
+  speed String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("specifications")
+}
+
+// ======================================================
+// ASSIGNMENTS
+// ======================================================
+
+model Assignment {
+  id String @id @default(cuid())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  assignedAt DateTime  @default(now())
+  returnedAt DateTime?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("assignments")
+}
+
+// ======================================================
+// MAINTENANCES
+// ======================================================
+
+model Maintenance {
+  id String @id @default(cuid())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  technicianId String
+  technician   User   @relation(fields: [technicianId], references: [id])
+
+  type   MaintenanceType
+  status MaintenanceStatus @default(PENDING)
+
+  description     String
+  maintenanceDate DateTime
+  cost            Float?
+
+  observations String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("maintenances")
+}
+
+// ======================================================
+// DOCUMENTS
+// ======================================================
+
+model Document {
+  id String @id @default(cuid())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  type DocumentType
+
+  fileName String
+  fileUrl  String
+  mimeType String
+  fileSize Int?
+
+  uploadedAt DateTime @default(now())
+
+  @@map("documents")
+}
+
+// ======================================================
+// LOANS
+// ======================================================
+
+model Loan {
+  id String @id @default(cuid())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  loanDate            DateTime  @default(now())
+  estimatedReturnDate DateTime
+  actualReturnDate    DateTime?
+
+  status LoanStatus @default(ACTIVE)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("loans")
+}
+
+// ======================================================
+// DISPOSALS
+// ======================================================
+
+model Disposal {
+  id String @id @default(cuid())
+
+  assetId String @unique
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  reason      DisposalReason
+  description String?
+
+  disposalDate DateTime
+
+  createdAt DateTime @default(now())
+
+  @@map("disposals")
+}
+
+// ======================================================
+// NOTIFICATIONS
+// ======================================================
+
+model Notification {
+  id String @id @default(cuid())
+
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id])
+
+  title   String
+  message String
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// ======================================================
+// AUDIT LOGS
+// ======================================================
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  action    String
+  tableName String
+  recordId  String
+
+  oldValues Json?
+  newValues Json?
+
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ======================================================
+// AUTH TOKENS
+// ======================================================
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
