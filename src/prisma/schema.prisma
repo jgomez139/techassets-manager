@@ -371,3 +371,18 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+// ======================================================
+// AUTH TOKENS
+// ======================================================
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
