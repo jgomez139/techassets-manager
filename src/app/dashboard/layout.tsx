@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { LayoutDashboard, Boxes, Users, Wrench, LogOut } from "lucide-react";
 
 import LogoutButton from "@/components/auth/logout-button";
 
@@ -10,78 +9,77 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex min-h-screen bg-gray-100">
+      {/* Sidebar */}
 
-      {/* SIDEBAR */}
-      <aside className="flex w-72 flex-col border-r bg-white shadow-sm">
-
-        {/* LOGO */}
-        <div className="border-b p-6">
-          <h1 className="text-2xl font-bold text-black">
+      <aside className="w-64 bg-black text-white">
+        <div className="border-b border-gray-800 p-6">
+          <h1 className="text-2xl font-bold">
             TechAssets
           </h1>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Gestión de Activos
+          <p className="mt-1 text-sm text-gray-400">
+            Gestión de activos
           </p>
         </div>
 
-        {/* NAVIGATION */}
-        <nav className="flex-1 space-y-2 p-4">
+        {/* Menu */}
 
+        <nav className="flex flex-col gap-2 p-4">
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition hover:bg-gray-100 hover:text-black"
+            className="rounded-lg px-4 py-3 transition hover:bg-gray-800"
           >
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
+            Dashboard
           </Link>
 
           <Link
             href="/categories"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition hover:bg-gray-100 hover:text-black"
+            className="rounded-lg px-4 py-3 transition hover:bg-gray-800"
           >
-            <Boxes size={20} />
-            <span>Categorías</span>
+            Categorías
           </Link>
 
           <Link
             href="/assets"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition hover:bg-gray-100 hover:text-black"
+            className="rounded-lg px-4 py-3 transition hover:bg-gray-800"
           >
-            <Boxes size={20} />
-            <span>Activos</span>
+            Activos
           </Link>
 
           <Link
             href="/employees"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition hover:bg-gray-100 hover:text-black"
+            className="rounded-lg px-4 py-3 transition hover:bg-gray-800"
           >
-            <Users size={20} />
-            <span>Empleados</span>
+            Empleados
+          </Link>
+
+          <Link
+            href="/assignments"
+            className="rounded-lg px-4 py-3 transition hover:bg-gray-800"
+          >
+            Asignaciones
           </Link>
 
           <Link
             href="/maintenances"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition hover:bg-gray-100 hover:text-black"
+            className="rounded-lg px-4 py-3 transition hover:bg-gray-800"
           >
-            <Wrench size={20} />
-            <span>Mantenimientos</span>
+            Mantenimientos
           </Link>
-
         </nav>
 
-        {/* LOGOUT */}
-        <div className="border-t p-4">
+        {/* Logout */}
+
+        <div className="absolute bottom-0 w-64 border-t border-gray-800 p-4">
           <LogoutButton />
         </div>
-
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* Content */}
+
       <main className="flex-1 p-8">
         {children}
       </main>
-
     </div>
   );
 }
