@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { toast } from "sonner";
 
+import { assetStatusLabels } from "@/lib/asset-status";
+
 interface Asset {
   id: string;
 
@@ -27,6 +29,7 @@ interface Props {
 export default function AssignmentForm({
   onSaved,
 }: Props) {
+
   const [assets, setAssets] =
     useState<Asset[]>([]);
 
@@ -46,7 +49,9 @@ export default function AssignmentForm({
     });
 
   async function loadData() {
+
     try {
+
       const [
         assetsRes,
         employeesRes,
@@ -71,14 +76,26 @@ export default function AssignmentForm({
         employeesData
       );
 
-      // TEMPORAL:
-      // Mostrar TODOS los activos
+      // Mostrar solo activos disponibles
 
-      setAssets(assetsData);
+      const availableAssets =
+        assetsData.filter(
+          (asset: Asset) =>
+            asset.status ===
+              "IN_STORAGE" &&
+            !asset.isDeleted
+        );
 
-      setEmployees(employeesData);
+      setAssets(
+        availableAssets
+      );
+
+      setEmployees(
+        employeesData
+      );
 
     } catch (error) {
+
       console.error(error);
 
       toast.error(
@@ -97,6 +114,7 @@ export default function AssignmentForm({
       HTMLTextAreaElement
     >
   ) {
+
     setFormData({
       ...formData,
 
@@ -108,9 +126,11 @@ export default function AssignmentForm({
   async function handleSubmit(
     e: React.FormEvent
   ) {
+
     e.preventDefault();
 
     if (!formData.assetId) {
+
       toast.error(
         "Seleccione un activo"
       );
@@ -119,6 +139,7 @@ export default function AssignmentForm({
     }
 
     if (!formData.employeeId) {
+
       toast.error(
         "Seleccione un empleado"
       );
@@ -127,6 +148,7 @@ export default function AssignmentForm({
     }
 
     try {
+
       setLoading(true);
 
       const res = await fetch(
@@ -149,6 +171,7 @@ export default function AssignmentForm({
         await res.json();
 
       if (!res.ok) {
+
         toast.error(
           data.error ||
             "Error creando asignación"
@@ -174,6 +197,7 @@ export default function AssignmentForm({
       loadData();
 
     } catch (error) {
+
       console.error(error);
 
       toast.error(
@@ -181,6 +205,7 @@ export default function AssignmentForm({
       );
 
     } finally {
+
       setLoading(false);
     }
   }
@@ -190,9 +215,11 @@ export default function AssignmentForm({
       onSubmit={handleSubmit}
       className="rounded-2xl bg-white p-8 shadow"
     >
+
       {/* Header */}
 
       <div className="mb-6">
+
         <h2 className="text-2xl font-bold">
           Nueva asignación
         </h2>
@@ -200,14 +227,17 @@ export default function AssignmentForm({
         <p className="text-sm text-gray-500">
           Asignar activos a empleados
         </p>
+
       </div>
 
       {/* Grid */}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Activo */}
+
+        {/* Select activo */}
 
         <div>
+
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Activo
           </label>
@@ -218,31 +248,45 @@ export default function AssignmentForm({
             onChange={handleChange}
             className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
           >
+
             <option value="">
               Seleccionar activo
             </option>
 
             {assets.length > 0 ? (
+
               assets.map((asset) => (
+
                 <option
                   key={asset.id}
                   value={asset.id}
                 >
+
                   {asset.name} (
-                  {asset.status})
+                  {
+                    assetStatusLabels[
+                      asset.status as keyof typeof assetStatusLabels
+                    ]
+                  })
+
                 </option>
               ))
+
             ) : (
+
               <option disabled>
-                No hay activos
+                No hay activos disponibles
               </option>
             )}
+
           </select>
+
         </div>
 
-        {/* Empleado */}
+        {/* Select empleado */}
 
         <div>
+
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Empleado
           </label>
@@ -255,12 +299,14 @@ export default function AssignmentForm({
             onChange={handleChange}
             className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
           >
+
             <option value="">
               Seleccionar empleado
             </option>
 
             {employees.map(
               (employee) => (
+
                 <option
                   key={
                     employee.id
@@ -273,13 +319,17 @@ export default function AssignmentForm({
                 </option>
               )
             )}
+
           </select>
+
         </div>
+
       </div>
 
-      {/* Observaciones */}
+      {/* Notes */}
 
       <div className="mt-4">
+
         <label className="mb-2 block text-sm font-medium text-gray-700">
           Observaciones
         </label>
@@ -292,27 +342,31 @@ export default function AssignmentForm({
           rows={4}
           className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
         />
+
       </div>
 
       {/* Info */}
 
       <div className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-700">
-        Actualmente se muestran
-        todos los activos para
-        pruebas.
+
+        Solo aparecen activos disponibles en almacén.
+
       </div>
 
-      {/* Botón */}
+      {/* Button */}
 
       <button
         type="submit"
         disabled={loading}
         className="mt-6 rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
       >
+
         {loading
           ? "Asignando..."
           : "Asignar activo"}
+
       </button>
+
     </form>
   );
 }
