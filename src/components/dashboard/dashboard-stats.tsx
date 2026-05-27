@@ -1,102 +1,83 @@
-"use client";
+interface Asset {
+  id: string;
+}
 
-import { useEffect, useState } from "react";
+interface Employee {
+  id: string;
+}
 
-import StatCard from "./stat-card";
+interface Assignment {
+  id: string;
+}
 
-export default function DashboardStats() {
+interface Maintenance {
+  id: string;
+}
 
-  const [stats, setStats] =
-    useState({
-      assets: 0,
 
-      employees: 0,
+interface Props {
+  assets: Asset[];
 
-      assignments: 0,
+  employees: Employee[];
 
-      maintenances: 0,
-    });
+  assignments: Assignment[];
 
-  async function loadStats() {
+  maintenances: Maintenance[];
+}
 
-    try {
 
-      const [
-        assetsRes,
-        employeesRes,
-        assignmentsRes,
-        maintenancesRes,
-      ] = await Promise.all([
-        fetch("/api/assets"),
+export default function DashboardStats({
+  assets,
+  employees,
+  assignments,
+  maintenances,
+}: Props) {
 
-        fetch("/api/employees"),
+  const stats = [
+    {
+      title: "Activos",
+      value: assets.length,
+    },
 
-        fetch("/api/assignments"),
+    {
+      title: "Empleados",
+      value: employees.length,
+    },
 
-        fetch("/api/maintenances"),
-      ]);
+    {
+      title: "Asignaciones",
+      value:
+        assignments.length,
+    },
 
-      const assets =
-        await assetsRes.json();
+    {
+      title: "Mantenimientos",
+      value:
+        maintenances.length,
+    },
+  ];
 
-      const employees =
-        await employeesRes.json();
-
-      const assignments =
-        await assignmentsRes.json();
-
-      const maintenances =
-        await maintenancesRes.json();
-
-      setStats({
-        assets: assets.length,
-
-        employees:
-          employees.length,
-
-        assignments:
-          assignments.length,
-
-        maintenances:
-          maintenances.length,
-      });
-
-    } catch (error) {
-
-      console.error(error);
-    }
-  }
-
-  useEffect(() => {
-    loadStats();
-  }, []);
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
 
-      <StatCard
-        title="Activos"
-        value={stats.assets}
-        color="bg-blue-600"
-      />
+      {stats.map((stat) => (
 
-      <StatCard
-        title="Empleados"
-        value={stats.employees}
-        color="bg-green-600"
-      />
+        <div
+          key={stat.title}
+          className="rounded-2xl bg-white p-6 shadow"
+        >
 
-      <StatCard
-        title="Asignaciones"
-        value={stats.assignments}
-        color="bg-purple-600"
-      />
+          <p className="text-sm text-gray-500">
+            {stat.title}
+          </p>
 
-      <StatCard
-        title="Mantenimientos"
-        value={stats.maintenances}
-        color="bg-orange-600"
-      />
+          <h2 className="mt-2 text-3xl font-bold">
+            {stat.value}
+          </h2>
+
+        </div>
+      ))}
 
     </div>
   );

@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import AssetForm from "@/components/assets/asset-form";
 
+import ExportExcel from "@/components/reports/export-excel";
+
+import ExportPDF from "@/components/reports/export-pdf";
+
 import {
   assetStatusLabels,
   assetStatusColors,
@@ -33,6 +37,8 @@ interface Asset {
   categoryId: string;
 
   purchaseCost?: number;
+
+  createdAt: string;
 
   category: {
     id: string;
@@ -261,19 +267,37 @@ export default function AssetsPage() {
 
           </div>
 
-          {/* Search */}
+          <div className="flex flex-col gap-3 md:flex-row">
 
-          <input
-            type="text"
-            placeholder="Buscar activo..."
-            value={search}
-            onChange={(e) =>
-              setSearch(
-                e.target.value
-              )
-            }
-            className="w-full rounded-xl border px-4 py-3 md:w-80"
-          />
+            {/* Search */}
+
+            <input
+              type="text"
+              placeholder="Buscar activo..."
+              value={search}
+              onChange={(e) =>
+                setSearch(
+                  e.target.value
+                )
+              }
+              className="w-full rounded-xl border px-4 py-3 md:w-80"
+            />
+
+            {/* Export Buttons */}
+
+            <div className="flex gap-2">
+
+              <ExportExcel
+                assets={assets}
+              />
+
+              <ExportPDF
+                assets={assets}
+              />
+
+            </div>
+
+          </div>
 
         </div>
 
