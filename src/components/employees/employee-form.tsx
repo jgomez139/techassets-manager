@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import { toast } from "sonner";
 
-
 interface Employee {
-  id?: string;
+  id: string;
 
   name: string;
 
@@ -19,27 +21,26 @@ interface Employee {
   department?: string;
 }
 
-
-interface Props {
+interface EmployeeFormProps {
   onSaved: () => void;
 
   editingEmployee?: Employee | null;
 
-  clearEditing: () => void;
+  clearEditing?: () => void;
 }
-
 
 export default function EmployeeForm({
   onSaved,
   editingEmployee,
   clearEditing,
-}: Props) {
+}: EmployeeFormProps) {
 
   const [loading, setLoading] =
     useState(false);
 
-  const [formData, setFormData] =
-    useState<Employee>({
+  const [form, setForm] =
+    useState({
+
       name: "",
 
       email: "",
@@ -55,42 +56,26 @@ export default function EmployeeForm({
 
     if (editingEmployee) {
 
-      setFormData({
-        id: editingEmployee.id,
+      setForm({
 
         name:
-          editingEmployee.name,
+          editingEmployee.name || "",
 
         email:
-          editingEmployee.email,
+          editingEmployee.email || "",
 
         phone:
           editingEmployee.phone || "",
 
         position:
-          editingEmployee.position,
+          editingEmployee.position || "",
 
         department:
           editingEmployee.department || "",
       });
-
-    } else {
-
-      setFormData({
-        name: "",
-
-        email: "",
-
-        phone: "",
-
-        position: "",
-
-        department: "",
-      });
     }
 
   }, [editingEmployee]);
-
 
   function handleChange(
     e: React.ChangeEvent<
@@ -98,14 +83,13 @@ export default function EmployeeForm({
     >
   ) {
 
-    setFormData({
-      ...formData,
+    setForm({
+      ...form,
 
       [e.target.name]:
         e.target.value,
     });
   }
-
 
   async function handleSubmit(
     e: React.FormEvent
@@ -117,48 +101,77 @@ export default function EmployeeForm({
 
       setLoading(true);
 
-      const isEditing =
-        !!editingEmployee;
+      const url =
+        editingEmployee
+          ? `/api/employees/${editingEmployee.id}`
+          : "/api/employees";
 
-      const url = isEditing
-        ? `/api/employees/${editingEmployee?.id}`
-        : "/api/employees";
+      const method =
+        editingEmployee
+          ? "PUT"
+          : "POST";
 
-      const method = isEditing
-        ? "PUT"
-        : "POST";
+      const res = await fetch(
+        url,
+        {
+          method,
 
-      const res = await fetch(url, {
-        method,
+          credentials:
+            "include",
 
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-        body: JSON.stringify(formData),
-      });
+          body: JSON.stringify(
+            form
+          ),
+        }
+      );
+
+      const data =
+        await res.json();
 
       if (!res.ok) {
-        throw new Error();
+
+        toast.error(
+          data.error ||
+            "Error guardando empleado"
+        );
+
+        return;
       }
 
       toast.success(
-        isEditing
+        editingEmployee
           ? "Empleado actualizado"
           : "Empleado creado"
       );
 
-      onSaved();
+      setForm({
 
-      clearEditing();
+        name: "",
+
+        email: "",
+
+        phone: "",
+
+        position: "",
+
+        department: "",
+      });
+
+      clearEditing?.();
+
+      onSaved();
 
     } catch (error) {
 
       console.error(error);
 
       toast.error(
-        "Ocurrió un error"
+        "Error guardando empleado"
       );
 
     } finally {
@@ -167,109 +180,133 @@ export default function EmployeeForm({
     }
   }
 
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl bg-white p-8 shadow"
-    >
+    <div className="rounded-2xl bg-white p-6 shadow">
 
-      <div className="mb-6">
+      <h2 className="mb-6 text-xl font-bold">
 
-        <h2 className="text-2xl font-bold">
+        {editingEmployee
+          ? "Editar empleado"
+          : "Nuevo empleado"}
 
-          {editingEmployee
-            ? "Editar empleado"
-            : "Nuevo empleado"}
+      </h2>
 
-        </h2>
-
-        <p className="text-sm text-gray-500">
-
-          Gestión de empleados
-
-        </p>
-
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <form
+        onSubmit={
+          handleSubmit
+        }
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
+      >
 
         <input
           type="text"
           name="name"
           placeholder="Nombre"
-          value={formData.name}
-          onChange={handleChange}
-          className="rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
+          value={form.name}
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
         />
 
         <input
           type="email"
           name="email"
-          placeholder="Correo"
-          value={formData.email}
-          onChange={handleChange}
-          className="rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
+          placeholder="Correo electrónico"
+          value={form.email}
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
         />
 
         <input
           type="text"
           name="phone"
           placeholder="Teléfono"
-          value={formData.phone}
-          onChange={handleChange}
-          className="rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
+          value={form.phone}
+          onChange={
+            handleChange
+          }
+          className="rounded-xl border px-4 py-3"
         />
 
         <input
           type="text"
           name="position"
           placeholder="Cargo"
-          value={formData.position}
-          onChange={handleChange}
-          className="rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
+          value={form.position}
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
         />
 
         <input
           type="text"
           name="department"
           placeholder="Departamento"
-          value={formData.department}
-          onChange={handleChange}
-          className="rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
+          value={
+            form.department
+          }
+          onChange={
+            handleChange
+          }
+          className="rounded-xl border px-4 py-3 md:col-span-2"
         />
 
-      </div>
-
-      <div className="mt-6 flex gap-3">
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
-        >
-
-          {loading
-            ? "Guardando..."
-            : editingEmployee
-            ? "Actualizar"
-            : "Crear"}
-
-        </button>
-
-        {editingEmployee && (
+        <div className="md:col-span-2 flex gap-3">
 
           <button
-            type="button"
-            onClick={clearEditing}
-            className="rounded-xl bg-gray-200 px-6 py-3 hover:bg-gray-300"
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
           >
-            Cancelar
+
+            {loading
+              ? "Guardando..."
+              : editingEmployee
+              ? "Actualizar"
+              : "Crear"}
+
           </button>
-        )}
 
-      </div>
+          {editingEmployee && (
 
-    </form>
+            <button
+              type="button"
+              onClick={() => {
+
+                clearEditing?.();
+
+                setForm({
+
+                  name: "",
+
+                  email: "",
+
+                  phone: "",
+
+                  position: "",
+
+                  department: "",
+                });
+              }}
+              className="rounded-xl border px-6 py-3 transition hover:bg-gray-100"
+            >
+
+              Cancelar
+
+            </button>
+          )}
+
+        </div>
+
+      </form>
+
+    </div>
   );
 }

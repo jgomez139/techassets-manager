@@ -1,26 +1,52 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+
+import {
+  NextResponse,
+} from "next/server";
+
+import {
+  requireRole,
+} from "@/lib/auth";
 
 export async function GET() {
+
+  const auth =
+    await requireRole([
+      "ADMIN",
+      "SUPERVISOR",
+    ]);
+
+  if ("error" in auth) {
+
+    return NextResponse.json(
+      {
+        error: auth.error,
+      },
+      {
+        status:
+          auth.status,
+      }
+    );
+  }
+
   try {
 
     const assets =
       await prisma.asset.findMany({
-
-        where: {
-          isDeleted: false,
-        },
 
         include: {
           category: true,
         },
 
         orderBy: {
-          createdAt: "desc",
+          createdAt:
+            "desc",
         },
       });
 
-    return NextResponse.json(assets);
+    return NextResponse.json(
+      assets
+    );
 
   } catch (error) {
 
@@ -28,9 +54,12 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        error: "Error obteniendo activos",
+        error:
+          "Error obteniendo activos",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
@@ -38,19 +67,42 @@ export async function GET() {
 export async function POST(
   req: Request
 ) {
+
+  const auth =
+    await requireRole([
+      "ADMIN",
+    ]);
+
+  if ("error" in auth) {
+
+    return NextResponse.json(
+      {
+        error: auth.error,
+      },
+      {
+        status:
+          auth.status,
+      }
+    );
+  }
+
   try {
 
-    const body = await req.json();
+    const body =
+      await req.json();
 
     const asset =
       await prisma.asset.create({
 
         data: {
-          name: body.name,
+          name:
+            body.name,
 
-          brand: body.brand,
+          brand:
+            body.brand,
 
-          model: body.model,
+          model:
+            body.model,
 
           serialNumber:
             body.serialNumber,
@@ -58,26 +110,21 @@ export async function POST(
           inventoryCode:
             body.inventoryCode,
 
-          status: body.status,
-
           description:
             body.description,
 
-          categoryId:
-            body.categoryId,
+          status:
+            body.status,
 
           purchaseCost:
             body.purchaseCost
-              ? Number(
+              ? parseFloat(
                   body.purchaseCost
                 )
               : null,
 
-          supplier:
-            body.supplier,
-
-          invoiceNumber:
-            body.invoiceNumber,
+          categoryId:
+            body.categoryId,
         },
 
         include: {
@@ -85,7 +132,9 @@ export async function POST(
         },
       });
 
-    return NextResponse.json(asset);
+    return NextResponse.json(
+      asset
+    );
 
   } catch (error) {
 
@@ -93,9 +142,12 @@ export async function POST(
 
     return NextResponse.json(
       {
-        error: "Error creando activo",
+        error:
+          "Error creando activo",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }

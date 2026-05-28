@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import { useRouter } from "next/navigation";
 
 import EmployeeForm from "@/components/employees/employee-form";
 
@@ -26,11 +32,17 @@ interface Employee {
 
 export default function EmployeesPage() {
 
+  const router =
+    useRouter();
+
   const [employees, setEmployees] =
     useState<Employee[]>([]);
 
   const [loading, setLoading] =
     useState(true);
+
+  const [unauthorized, setUnauthorized] =
+    useState(false);
 
   const [search, setSearch] =
     useState("");
@@ -53,13 +65,54 @@ export default function EmployeesPage() {
         "/api/employees"
       );
 
-      const data = await res.json();
+      // =========================
+      // PROTECCIÓN REAL
+      // =========================
+
+      if (
+        res.status === 401
+      ) {
+
+        router.push("/login");
+
+        return;
+      }
+
+      if (
+        res.status === 403
+      ) {
+
+        setUnauthorized(
+          true
+        );
+
+        return;
+      }
+
+      const data =
+        await res.json();
+
+      // Evita errores si API responde error JSON
+      if (
+        !Array.isArray(data)
+      ) {
+
+        setEmployees([]);
+
+        return;
+      }
 
       setEmployees(data);
 
     } catch (error) {
 
       console.error(error);
+
+      toast.error(
+        "Error cargando empleados"
+      );
+
+      setEmployees([]);
 
     } finally {
 
@@ -87,7 +140,28 @@ export default function EmployeesPage() {
         }
       );
 
+      if (
+        res.status === 401
+      ) {
+
+        router.push("/login");
+
+        return;
+      }
+
+      if (
+        res.status === 403
+      ) {
+
+        toast.error(
+          "No tienes permisos"
+        );
+
+        return;
+      }
+
       if (!res.ok) {
+
         throw new Error();
       }
 
@@ -109,7 +183,9 @@ export default function EmployeesPage() {
 
 
   useEffect(() => {
+
     getEmployees();
+
   }, []);
 
 
@@ -133,6 +209,37 @@ export default function EmployeesPage() {
       );
 
     }, [employees, search]);
+
+
+  // =========================
+  // SIN PERMISOS
+  // =========================
+
+  if (unauthorized) {
+
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+
+        <div className="rounded-2xl bg-white p-10 shadow">
+
+          <h1 className="mb-3 text-3xl font-bold text-red-600">
+
+            Acceso denegado
+
+          </h1>
+
+          <p className="text-gray-600">
+
+            No tienes permisos para acceder
+            a empleados.
+
+          </p>
+
+        </div>
+
+      </div>
+    );
+  }
 
 
   return (

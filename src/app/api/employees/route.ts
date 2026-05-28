@@ -1,18 +1,37 @@
-import { NextResponse } from "next/server";
-
 import { prisma } from "@/lib/prisma";
 
+import { NextResponse } from "next/server";
 
-// GET - Obtener empleados
+import { requireRole } from "@/lib/auth";
 
 export async function GET() {
+
+  const auth =
+    await requireRole([
+      "ADMIN",
+    ]);
+
+  if ("error" in auth) {
+
+    return NextResponse.json(
+      {
+        error: auth.error,
+      },
+      {
+        status:
+          auth.status,
+      }
+    );
+  }
 
   try {
 
     const employees =
       await prisma.employee.findMany({
+
         orderBy: {
-          createdAt: "desc",
+          createdAt:
+            "desc",
         },
       });
 
@@ -36,25 +55,45 @@ export async function GET() {
   }
 }
 
-
-// POST - Crear empleado
-
 export async function POST(
   req: Request
 ) {
 
+  const auth =
+    await requireRole([
+      "ADMIN",
+    ]);
+
+  if ("error" in auth) {
+
+    return NextResponse.json(
+      {
+        error: auth.error,
+      },
+      {
+        status:
+          auth.status,
+      }
+    );
+  }
+
   try {
 
-    const body = await req.json();
+    const body =
+      await req.json();
 
     const employee =
       await prisma.employee.create({
+
         data: {
-          name: body.name,
+          name:
+            body.name,
 
-          email: body.email,
+          email:
+            body.email,
 
-          phone: body.phone,
+          phone:
+            body.phone,
 
           position:
             body.position,

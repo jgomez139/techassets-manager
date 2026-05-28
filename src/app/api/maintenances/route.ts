@@ -1,7 +1,6 @@
-import { prisma } from "@/lib/prisma";
-
 import { NextResponse } from "next/server";
 
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
 
@@ -11,7 +10,10 @@ export async function GET() {
       await prisma.maintenance.findMany({
 
         include: {
+
           asset: true,
+
+          technician: true,
         },
 
         orderBy: {
@@ -32,11 +34,12 @@ export async function GET() {
         error:
           "Error obteniendo mantenimientos",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
-
 
 export async function POST(
   req: Request
@@ -47,82 +50,42 @@ export async function POST(
     const body =
       await req.json();
 
-    const {
-      assetId,
-      technicianName,
-      type,
-      description,
-      maintenanceDate,
-      cost,
-      observations,
-    } = body;
-
-    // Validar activo
-
-    const asset =
-      await prisma.asset.findUnique({
-        where: {
-          id: assetId,
-        },
-      });
-
-    if (!asset) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Activo no encontrado",
-        },
-        { status: 404 }
-      );
-    }
-
-    // Crear mantenimiento
-
     const maintenance =
       await prisma.maintenance.create({
 
         data: {
-          assetId,
 
-          technicianName,
+          assetId:
+            body.assetId,
 
-          type,
+          technicianId:
+            body.technicianId,
 
-          description,
+          description:
+            body.description,
 
           maintenanceDate:
             new Date(
-              maintenanceDate
+              body.maintenanceDate
             ),
 
-          cost:
-            cost && cost !== ""
-              ? parseFloat(cost)
-              : null,
+          type: body.type,
 
-          observations,
+          cost: body.cost
+            ? Number(body.cost)
+            : null,
 
-          status: "PENDING",
+          status:
+            body.status,
         },
 
         include: {
+
           asset: true,
+
+          technician: true,
         },
       });
-
-    // Cambiar activo a reparación
-
-    await prisma.asset.update({
-      where: {
-        id: assetId,
-      },
-
-      data: {
-        status:
-          "UNDER_REPAIR",
-      },
-    });
 
     return NextResponse.json(
       maintenance
@@ -137,7 +100,9 @@ export async function POST(
         error:
           "Error creando mantenimiento",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }

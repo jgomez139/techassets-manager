@@ -1,112 +1,151 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import { toast } from "sonner";
 
 interface Category {
-  id?: string;
+  id: string;
+
   name: string;
+
   description?: string;
 }
 
-interface Props {
+interface CategoryFormProps {
   onSaved: () => void;
+
   editingCategory?: Category | null;
-  clearEditing: () => void;
+
+  clearEditing?: () => void;
 }
 
 export default function CategoryForm({
   onSaved,
   editingCategory,
   clearEditing,
-}: Props) {
-
-  const [name, setName] = useState("");
-  const [description, setDescription] =
-    useState("");
+}: CategoryFormProps) {
 
   const [loading, setLoading] =
     useState(false);
 
+  const [form, setForm] =
+    useState({
+
+      name: "",
+
+      description: "",
+    });
+
   useEffect(() => {
 
     if (editingCategory) {
-      setName(editingCategory.name);
 
-      setDescription(
-        editingCategory.description || ""
-      );
+      setForm({
 
-    } else {
-      setName("");
-      setDescription("");
+        name:
+          editingCategory.name || "",
+
+        description:
+          editingCategory.description || "",
+      });
     }
 
   }, [editingCategory]);
 
+  function handleChange(
+    e: React.ChangeEvent<
+      HTMLInputElement |
+      HTMLTextAreaElement
+    >
+  ) {
+
+    setForm({
+      ...form,
+
+      [e.target.name]:
+        e.target.value,
+    });
+  }
+
   async function handleSubmit(
     e: React.FormEvent
   ) {
+
     e.preventDefault();
-
-    if (!name.trim()) {
-      toast.error(
-        "El nombre es obligatorio"
-      );
-
-      return;
-    }
 
     try {
 
       setLoading(true);
 
-      const isEditing =
-        !!editingCategory;
+      const url =
+        editingCategory
+          ? `/api/categories/${editingCategory.id}`
+          : "/api/categories";
 
-      const url = isEditing
-        ? `/api/categories/${editingCategory.id}`
-        : "/api/categories";
+      const method =
+        editingCategory
+          ? "PUT"
+          : "POST";
 
-      const method = isEditing
-        ? "PUT"
-        : "POST";
+      const res = await fetch(
+        url,
+        {
+          method,
 
-      const res = await fetch(url, {
-        method,
+          credentials:
+            "include",
 
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-        body: JSON.stringify({
-          name,
-          description,
-        }),
-      });
+          body: JSON.stringify(
+            form
+          ),
+        }
+      );
+
+      const data =
+        await res.json();
 
       if (!res.ok) {
-        throw new Error();
+
+        toast.error(
+          data.error ||
+            "Error guardando categoría"
+        );
+
+        return;
       }
 
       toast.success(
-        isEditing
+        editingCategory
           ? "Categoría actualizada"
           : "Categoría creada"
       );
 
-      setName("");
-      setDescription("");
+      setForm({
 
-      clearEditing();
+        name: "",
+
+        description: "",
+      });
+
+      clearEditing?.();
 
       onSaved();
 
-    } catch {
+    } catch (error) {
+
+      console.error(error);
 
       toast.error(
-        "Ocurrió un error"
+        "Error guardando categoría"
       );
 
     } finally {
@@ -116,60 +155,91 @@ export default function CategoryForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mb-8 rounded-xl bg-white p-6 shadow"
-    >
+    <div className="mb-6 rounded-2xl bg-white p-6 shadow">
 
-      <div className="space-y-4">
+      <h2 className="mb-6 text-xl font-bold">
+
+        {editingCategory
+          ? "Editar categoría"
+          : "Nueva categoría"}
+
+      </h2>
+
+      <form
+        onSubmit={
+          handleSubmit
+        }
+        className="space-y-4"
+      >
 
         <input
           type="text"
-          placeholder="Nombre"
-          value={name}
-          onChange={(e) =>
-            setName(e.target.value)
+          name="name"
+          placeholder="Nombre de la categoría"
+          value={form.name}
+          onChange={
+            handleChange
           }
-          className="w-full rounded-lg border p-3"
+          required
+          className="w-full rounded-xl border px-4 py-3"
         />
 
         <textarea
+          name="description"
           placeholder="Descripción"
-          value={description}
-          onChange={(e) =>
-            setDescription(e.target.value)
+          value={
+            form.description
           }
-          className="w-full rounded-lg border p-3"
+          onChange={
+            handleChange
+          }
+          rows={4}
+          className="w-full rounded-xl border px-4 py-3"
         />
 
         <div className="flex gap-3">
 
           <button
-            disabled={loading}
             type="submit"
-            className="rounded-lg bg-black px-6 py-3 text-white"
+            disabled={loading}
+            className="rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
           >
+
             {loading
               ? "Guardando..."
               : editingCategory
               ? "Actualizar"
-              : "Crear categoría"}
+              : "Crear"}
+
           </button>
 
           {editingCategory && (
+
             <button
               type="button"
-              onClick={clearEditing}
-              className="rounded-lg bg-gray-300 px-6 py-3"
+              onClick={() => {
+
+                clearEditing?.();
+
+                setForm({
+
+                  name: "",
+
+                  description: "",
+                });
+              }}
+              className="rounded-xl border px-6 py-3 transition hover:bg-gray-100"
             >
+
               Cancelar
+
             </button>
           )}
 
         </div>
 
-      </div>
+      </form>
 
-    </form>
+    </div>
   );
 }

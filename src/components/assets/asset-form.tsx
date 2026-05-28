@@ -1,55 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import { toast } from "sonner";
 
-import { assetStatusLabels } from "@/lib/asset-status";
-
 interface Category {
   id: string;
+
   name: string;
 }
 
-interface Asset {
-  id?: string;
-
-  name: string;
-
-  brand: string;
-
-  model: string;
-
-  serialNumber: string;
-
-  inventoryCode: string;
-
-  status:
-    | "IN_USE"
-    | "IN_STORAGE"
-    | "UNDER_REPAIR"
-    | "DISPOSED";
-
-  description?: string;
-
-  categoryId: string;
-
-  purchaseCost?: number;
-}
-
-interface Props {
+interface AssetFormProps {
   onSaved: () => void;
 
-  editingAsset?: Asset | null;
+  editingAsset?: any;
 
-  clearEditing: () => void;
+  clearEditing?: () => void;
 }
 
 export default function AssetForm({
   onSaved,
   editingAsset,
   clearEditing,
-}: Props) {
+}: AssetFormProps) {
 
   const [categories, setCategories] =
     useState<Category[]>([]);
@@ -57,8 +33,9 @@ export default function AssetForm({
   const [loading, setLoading] =
     useState(false);
 
-  const [formData, setFormData] =
-    useState<Asset>({
+  const [form, setForm] =
+    useState({
+
       name: "",
 
       brand: "",
@@ -75,7 +52,7 @@ export default function AssetForm({
 
       categoryId: "",
 
-      purchaseCost: 0,
+      purchaseCost: "",
     });
 
   async function getCategories() {
@@ -83,12 +60,20 @@ export default function AssetForm({
     try {
 
       const res = await fetch(
-        "/api/categories"
+        "/api/categories",
+        {
+          credentials:
+            "include",
+        }
       );
 
-      const data = await res.json();
+      const data =
+        await res.json();
 
-      setCategories(data);
+      if (Array.isArray(data)) {
+
+        setCategories(data);
+      }
 
     } catch (error) {
 
@@ -101,43 +86,136 @@ export default function AssetForm({
   }
 
   useEffect(() => {
+
     getCategories();
+
   }, []);
 
   useEffect(() => {
 
     if (editingAsset) {
 
-      setFormData({
-        id: editingAsset.id,
+      setForm({
 
-        name: editingAsset.name,
+        name:
+          editingAsset.name || "",
 
-        brand: editingAsset.brand,
+        brand:
+          editingAsset.brand || "",
 
-        model: editingAsset.model,
+        model:
+          editingAsset.model || "",
 
         serialNumber:
-          editingAsset.serialNumber,
+          editingAsset.serialNumber || "",
 
         inventoryCode:
-          editingAsset.inventoryCode,
+          editingAsset.inventoryCode || "",
 
-        status: editingAsset.status,
+        status:
+          editingAsset.status ||
+          "IN_STORAGE",
 
         description:
-          editingAsset.description || "",
+          editingAsset.description ||
+          "",
 
         categoryId:
-          editingAsset.categoryId,
+          editingAsset.categoryId ||
+          "",
 
         purchaseCost:
-          editingAsset.purchaseCost || 0,
+          editingAsset.purchaseCost?.toString() ||
+          "",
       });
 
-    } else {
+    }
 
-      setFormData({
+  }, [editingAsset]);
+
+  function handleChange(
+    e: React.ChangeEvent<
+      HTMLInputElement |
+      HTMLTextAreaElement |
+      HTMLSelectElement
+    >
+  ) {
+
+    setForm({
+      ...form,
+
+      [e.target.name]:
+        e.target.value,
+    });
+  }
+
+  async function handleSubmit(
+    e: React.FormEvent
+  ) {
+
+    e.preventDefault();
+
+    try {
+
+      setLoading(true);
+
+      const url =
+        editingAsset
+          ? `/api/assets/${editingAsset.id}`
+          : "/api/assets";
+
+      const method =
+        editingAsset
+          ? "PUT"
+          : "POST";
+
+      const res = await fetch(
+        url,
+        {
+          method,
+
+          credentials:
+            "include",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            ...form,
+
+            purchaseCost:
+              form.purchaseCost
+                ? parseFloat(
+                    form.purchaseCost
+                  )
+                : null,
+          }),
+        }
+      );
+
+      const data =
+        await res.json();
+
+      if (!res.ok) {
+
+        toast.error(
+          data.error ||
+            "Error guardando activo"
+        );
+
+        return;
+      }
+
+      toast.success(
+        editingAsset
+          ? "Activo actualizado"
+          : "Activo creado"
+      );
+
+      setForm({
+
         name: "",
 
         brand: "",
@@ -154,87 +232,10 @@ export default function AssetForm({
 
         categoryId: "",
 
-        purchaseCost: 0,
-      });
-    }
-
-  }, [editingAsset]);
-
-  function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement |
-      HTMLTextAreaElement |
-      HTMLSelectElement
-    >
-  ) {
-
-    setFormData({
-      ...formData,
-
-      [e.target.name]:
-        e.target.value,
-    });
-  }
-
-  async function handleSubmit(
-    e: React.FormEvent
-  ) {
-
-    e.preventDefault();
-
-    if (
-      !formData.name ||
-      !formData.brand ||
-      !formData.model ||
-      !formData.serialNumber ||
-      !formData.inventoryCode ||
-      !formData.categoryId
-    ) {
-
-      toast.error(
-        "Completa todos los campos obligatorios"
-      );
-
-      return;
-    }
-
-    try {
-
-      setLoading(true);
-
-      const isEditing =
-        !!editingAsset;
-
-      const url = isEditing
-        ? `/api/assets/${editingAsset?.id}`
-        : "/api/assets";
-
-      const method = isEditing
-        ? "PUT"
-        : "POST";
-
-      const res = await fetch(url, {
-        method,
-
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify(formData),
+        purchaseCost: "",
       });
 
-      if (!res.ok) {
-        throw new Error();
-      }
-
-      toast.success(
-        isEditing
-          ? "Activo actualizado correctamente"
-          : "Activo creado correctamente"
-      );
-
-      clearEditing();
+      clearEditing?.();
 
       onSaved();
 
@@ -243,7 +244,7 @@ export default function AssetForm({
       console.error(error);
 
       toast.error(
-        "Ocurrió un error"
+        "Error guardando activo"
       );
 
     } finally {
@@ -253,269 +254,240 @@ export default function AssetForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl bg-white p-8 shadow"
-    >
+    <div className="rounded-2xl bg-white p-6 shadow">
 
-      {/* Header */}
+      <h2 className="mb-6 text-xl font-bold">
 
-      <div className="mb-6">
+        {editingAsset
+          ? "Editar activo"
+          : "Nuevo activo"}
 
-        <h2 className="text-2xl font-bold">
+      </h2>
 
-          {editingAsset
-            ? "Editar activo"
-            : "Nuevo activo"}
+      <form
+        onSubmit={
+          handleSubmit
+        }
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
+      >
 
-        </h2>
+        <input
+          type="text"
+          name="name"
+          placeholder="Nombre"
+          value={form.name}
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        />
 
-        <p className="text-sm text-gray-500">
+        <input
+          type="text"
+          name="brand"
+          placeholder="Marca"
+          value={form.brand}
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        />
 
-          Completa la información del activo tecnológico
+        <input
+          type="text"
+          name="model"
+          placeholder="Modelo"
+          value={form.model}
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        />
 
-        </p>
+        <input
+          type="text"
+          name="serialNumber"
+          placeholder="Serial"
+          value={
+            form.serialNumber
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        />
 
-      </div>
+        <input
+          type="text"
+          name="inventoryCode"
+          placeholder="Código inventario"
+          value={
+            form.inventoryCode
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        />
 
-      {/* Grid */}
+        <select
+          name="status"
+          value={form.status}
+          onChange={
+            handleChange
+          }
+          className="rounded-xl border px-4 py-3"
+        >
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <option value="IN_STORAGE">
+            En almacén
+          </option>
 
-        {/* Nombre */}
+          <option value="IN_USE">
+            En uso
+          </option>
 
-        <div>
+          <option value="UNDER_REPAIR">
+            En reparación
+          </option>
 
-          <label className="mb-2 block text-sm font-medium">
-            Nombre
-          </label>
+          <option value="DISPOSED">
+            Dado de baja
+          </option>
 
-          <input
-            type="text"
-            name="name"
-            placeholder="Ej: Laptop Dell"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          />
+        </select>
 
-        </div>
+        <select
+          name="categoryId"
+          value={
+            form.categoryId
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        >
 
-        {/* Marca */}
+          <option value="">
+            Selecciona categoría
+          </option>
 
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Marca
-          </label>
-
-          <input
-            type="text"
-            name="brand"
-            placeholder="Ej: Dell"
-            value={formData.brand}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          />
-
-        </div>
-
-        {/* Modelo */}
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Modelo
-          </label>
-
-          <input
-            type="text"
-            name="model"
-            placeholder="Ej: Latitude 5420"
-            value={formData.model}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          />
-
-        </div>
-
-        {/* Serial */}
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Serial
-          </label>
-
-          <input
-            type="text"
-            name="serialNumber"
-            placeholder="Número serial"
-            value={formData.serialNumber}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          />
-
-        </div>
-
-        {/* Inventory Code */}
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Código inventario
-          </label>
-
-          <input
-            type="text"
-            name="inventoryCode"
-            placeholder="Ej: INV-001"
-            value={formData.inventoryCode}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          />
-
-        </div>
-
-        {/* Purchase Cost */}
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Costo compra
-          </label>
-
-          <input
-            type="number"
-            name="purchaseCost"
-            placeholder="Ej: 2500"
-            value={formData.purchaseCost}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          />
-
-        </div>
-
-        {/* Categoría */}
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Categoría
-          </label>
-
-          <select
-            name="categoryId"
-            value={formData.categoryId}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          >
-
-            <option value="">
-              Selecciona categoría
-            </option>
-
-            {categories.map((category) => (
+          {categories.map(
+            (category) => (
 
               <option
-                key={category.id}
-                value={category.id}
+                key={
+                  category.id
+                }
+                value={
+                  category.id
+                }
               >
-                {category.name}
+
+                {
+                  category.name
+                }
+
               </option>
-            ))}
+            )
+          )}
 
-          </select>
+        </select>
 
-        </div>
-
-        {/* Estado */}
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Estado
-          </label>
-
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
-          >
-
-            <option value="IN_USE">
-              {assetStatusLabels.IN_USE}
-            </option>
-
-            <option value="IN_STORAGE">
-              {assetStatusLabels.IN_STORAGE}
-            </option>
-
-            <option value="UNDER_REPAIR">
-              {assetStatusLabels.UNDER_REPAIR}
-            </option>
-
-            <option value="DISPOSED">
-              {assetStatusLabels.DISPOSED}
-            </option>
-
-          </select>
-
-        </div>
-
-      </div>
-
-      {/* Description */}
-
-      <div className="mt-4">
-
-        <label className="mb-2 block text-sm font-medium">
-          Descripción
-        </label>
+        <input
+          type="number"
+          step="0.01"
+          name="purchaseCost"
+          placeholder="Costo"
+          value={
+            form.purchaseCost
+          }
+          onChange={
+            handleChange
+          }
+          className="rounded-xl border px-4 py-3"
+        />
 
         <textarea
           name="description"
-          placeholder="Información adicional del activo..."
-          value={formData.description}
-          onChange={handleChange}
+          placeholder="Descripción"
+          value={
+            form.description
+          }
+          onChange={
+            handleChange
+          }
+          className="md:col-span-2 rounded-xl border px-4 py-3"
           rows={4}
-          className="w-full rounded-xl border border-gray-200 p-3 outline-none transition focus:border-black"
         />
 
-      </div>
-
-      {/* Buttons */}
-
-      <div className="mt-6 flex gap-3">
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
-        >
-
-          {loading
-            ? "Guardando..."
-            : editingAsset
-            ? "Actualizar activo"
-            : "Crear activo"}
-
-        </button>
-
-        {editingAsset && (
+        <div className="md:col-span-2 flex gap-3">
 
           <button
-            type="button"
-            onClick={clearEditing}
-            className="rounded-xl bg-gray-200 px-6 py-3 transition hover:bg-gray-300"
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
           >
-            Cancelar
+
+            {loading
+              ? "Guardando..."
+              : editingAsset
+              ? "Actualizar"
+              : "Crear"}
+
           </button>
-        )}
 
-      </div>
+          {editingAsset && (
 
-    </form>
+            <button
+              type="button"
+              onClick={() => {
+
+                clearEditing?.();
+
+                setForm({
+
+                  name: "",
+
+                  brand: "",
+
+                  model: "",
+
+                  serialNumber: "",
+
+                  inventoryCode: "",
+
+                  status:
+                    "IN_STORAGE",
+
+                  description:
+                    "",
+
+                  categoryId:
+                    "",
+
+                  purchaseCost:
+                    "",
+                });
+              }}
+              className="rounded-xl border px-6 py-3 transition hover:bg-gray-100"
+            >
+
+              Cancelar
+
+            </button>
+          )}
+
+        </div>
+
+      </form>
+
+    </div>
   );
 }

@@ -1,27 +1,110 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hashPassword, createAccessToken, createRefreshToken, saveRefreshToken, setAuthCookies } from "@/services/authService";
+
 import { prisma } from "@/lib/prisma";
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { name, email, password } = body;
+import {
+  hashPassword,
+} from "@/services/authService";
 
-  if (!email || !password || !name) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+export async function POST(
+  req: NextRequest
+) {
+
+  try {
+
+    const body =
+      await req.json();
+
+    const {
+      name,
+      email,
+      password,
+    } = body;
+
+    // Validaciones
+    if (
+      !name ||
+      !email ||
+      !password
+    ) {
+
+      return NextResponse.json(
+        {
+          error:
+            "Todos los campos son obligatorios",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // Verificar usuario existente
+    const existingUser =
+      await prisma.user.findUnique({
+        where: {
+          email,
+        },
+      });
+
+    if (existingUser) {
+
+      return NextResponse.json(
+        {
+          error:
+            "El correo ya está registrado",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // Hash password
+    const hashedPassword =
+      await hashPassword(
+        password
+      );
+
+    // Crear usuario
+    const user =
+      await prisma.user.create({
+        data: {
+          name,
+
+          email,
+
+          password:
+            hashedPassword,
+
+          role: "ADMIN",
+        },
+      });
+
+    return NextResponse.json({
+      ok: true,
+
+      user: {
+        id: user.id,
+
+        name: user.name,
+
+        email: user.email,
+      },
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Error registrando usuario",
+      },
+      {
+        status: 500,
+      }
+    );
   }
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return NextResponse.json({ error: "User exists" }, { status: 409 });
-
-  const hashed = await hashPassword(password);
-  const user = await prisma.user.create({ data: { name, email, password: hashed } });
-
-  const access = createAccessToken({ userId: user.id, role: user.role });
-  const refresh = createRefreshToken({ userId: user.id });
-  await saveRefreshToken(user.id, refresh);
-
-  let res = NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } }, { status: 201 });
-  res = setAuthCookies(res, access, refresh);
-
-  return res;
 }

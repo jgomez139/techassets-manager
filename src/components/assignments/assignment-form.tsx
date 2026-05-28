@@ -1,19 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import { toast } from "sonner";
-
-import { assetStatusLabels } from "@/lib/asset-status";
 
 interface Asset {
   id: string;
 
   name: string;
-
-  status: string;
-
-  isDeleted?: boolean;
 }
 
 interface Employee {
@@ -22,13 +19,16 @@ interface Employee {
   name: string;
 }
 
-interface Props {
+interface AssignmentFormProps {
   onSaved: () => void;
 }
 
 export default function AssignmentForm({
   onSaved,
-}: Props) {
+}: AssignmentFormProps) {
+
+  const [loading, setLoading] =
+    useState(false);
 
   const [assets, setAssets] =
     useState<Asset[]>([]);
@@ -36,11 +36,9 @@ export default function AssignmentForm({
   const [employees, setEmployees] =
     useState<Employee[]>([]);
 
-  const [loading, setLoading] =
-    useState(false);
-
-  const [formData, setFormData] =
+  const [form, setForm] =
     useState({
+
       assetId: "",
 
       employeeId: "",
@@ -56,8 +54,16 @@ export default function AssignmentForm({
         assetsRes,
         employeesRes,
       ] = await Promise.all([
-        fetch("/api/assets"),
-        fetch("/api/employees"),
+
+        fetch("/api/assets", {
+          credentials:
+            "include",
+        }),
+
+        fetch("/api/employees", {
+          credentials:
+            "include",
+        }),
       ]);
 
       const assetsData =
@@ -66,32 +72,20 @@ export default function AssignmentForm({
       const employeesData =
         await employeesRes.json();
 
-      console.log(
-        "ASSETS:",
-        assetsData
-      );
-
-      console.log(
-        "EMPLOYEES:",
-        employeesData
-      );
-
-      // Mostrar solo activos disponibles
-
-      const availableAssets =
-        assetsData.filter(
-          (asset: Asset) =>
-            asset.status ===
-              "IN_STORAGE" &&
-            !asset.isDeleted
-        );
-
       setAssets(
-        availableAssets
+        Array.isArray(
+          assetsData
+        )
+          ? assetsData
+          : []
       );
 
       setEmployees(
-        employeesData
+        Array.isArray(
+          employeesData
+        )
+          ? employeesData
+          : []
       );
 
     } catch (error) {
@@ -109,14 +103,20 @@ export default function AssignmentForm({
   }, []);
 
   function handleChange(
-    e: React.ChangeEvent<
-      HTMLSelectElement |
-      HTMLTextAreaElement
-    >
+    e:
+      | React.ChangeEvent<
+          HTMLInputElement
+        >
+      | React.ChangeEvent<
+          HTMLSelectElement
+        >
+      | React.ChangeEvent<
+          HTMLTextAreaElement
+        >
   ) {
 
-    setFormData({
-      ...formData,
+    setForm({
+      ...form,
 
       [e.target.name]:
         e.target.value,
@@ -129,24 +129,6 @@ export default function AssignmentForm({
 
     e.preventDefault();
 
-    if (!formData.assetId) {
-
-      toast.error(
-        "Seleccione un activo"
-      );
-
-      return;
-    }
-
-    if (!formData.employeeId) {
-
-      toast.error(
-        "Seleccione un empleado"
-      );
-
-      return;
-    }
-
     try {
 
       setLoading(true);
@@ -156,13 +138,16 @@ export default function AssignmentForm({
         {
           method: "POST",
 
+          credentials:
+            "include",
+
           headers: {
             "Content-Type":
               "application/json",
           },
 
           body: JSON.stringify(
-            formData
+            form
           ),
         }
       );
@@ -181,10 +166,11 @@ export default function AssignmentForm({
       }
 
       toast.success(
-        "Activo asignado correctamente"
+        "Asignación creada"
       );
 
-      setFormData({
+      setForm({
+
         assetId: "",
 
         employeeId: "",
@@ -193,8 +179,6 @@ export default function AssignmentForm({
       });
 
       onSaved();
-
-      loadData();
 
     } catch (error) {
 
@@ -211,162 +195,130 @@ export default function AssignmentForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl bg-white p-8 shadow"
-    >
+    <div className="rounded-2xl bg-white p-6 shadow">
 
-      {/* Header */}
+      <h2 className="mb-6 text-xl font-bold">
 
-      <div className="mb-6">
+        Nueva asignación
 
-        <h2 className="text-2xl font-bold">
-          Nueva asignación
-        </h2>
+      </h2>
 
-        <p className="text-sm text-gray-500">
-          Asignar activos a empleados
-        </p>
+      <form
+        onSubmit={
+          handleSubmit
+        }
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
+      >
 
-      </div>
+        {/* Activo */}
 
-      {/* Grid */}
+        <select
+          name="assetId"
+          value={
+            form.assetId
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        >
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <option value="">
+            Seleccionar activo
+          </option>
 
-        {/* Select activo */}
+          {assets.map(
+            (asset) => (
 
-        <div>
+              <option
+                key={asset.id}
+                value={asset.id}
+              >
 
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Activo
-          </label>
+                {asset.name}
 
-          <select
-            name="assetId"
-            value={formData.assetId}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
-          >
-
-            <option value="">
-              Seleccionar activo
-            </option>
-
-            {assets.length > 0 ? (
-
-              assets.map((asset) => (
-
-                <option
-                  key={asset.id}
-                  value={asset.id}
-                >
-
-                  {asset.name} (
-                  {
-                    assetStatusLabels[
-                      asset.status as keyof typeof assetStatusLabels
-                    ]
-                  })
-
-                </option>
-              ))
-
-            ) : (
-
-              <option disabled>
-                No hay activos disponibles
               </option>
-            )}
+            )
+          )}
 
-          </select>
+        </select>
 
-        </div>
+        {/* Empleado */}
 
-        {/* Select empleado */}
+        <select
+          name="employeeId"
+          value={
+            form.employeeId
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        >
 
-        <div>
+          <option value="">
+            Seleccionar empleado
+          </option>
 
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Empleado
-          </label>
+          {employees.map(
+            (
+              employee
+            ) => (
 
-          <select
-            name="employeeId"
-            value={
-              formData.employeeId
-            }
-            onChange={handleChange}
-            className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
-          >
+              <option
+                key={
+                  employee.id
+                }
+                value={
+                  employee.id
+                }
+              >
 
-            <option value="">
-              Seleccionar empleado
-            </option>
+                {employee.name}
 
-            {employees.map(
-              (employee) => (
+              </option>
+            )
+          )}
 
-                <option
-                  key={
-                    employee.id
-                  }
-                  value={
-                    employee.id
-                  }
-                >
-                  {employee.name}
-                </option>
-              )
-            )}
+        </select>
 
-          </select>
-
-        </div>
-
-      </div>
-
-      {/* Notes */}
-
-      <div className="mt-4">
-
-        <label className="mb-2 block text-sm font-medium text-gray-700">
-          Observaciones
-        </label>
+        {/* Notas */}
 
         <textarea
           name="notes"
-          placeholder="Observaciones de la asignación..."
-          value={formData.notes}
-          onChange={handleChange}
+          placeholder="Notas"
+          value={
+            form.notes
+          }
+          onChange={
+            handleChange
+          }
           rows={4}
-          className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-black"
+          className="rounded-xl border px-4 py-3 md:col-span-2"
         />
 
-      </div>
+        {/* Botón */}
 
-      {/* Info */}
+        <div className="md:col-span-2">
 
-      <div className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-700">
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
+          >
 
-        Solo aparecen activos disponibles en almacén.
+            {loading
+              ? "Guardando..."
+              : "Crear asignación"}
 
-      </div>
+          </button>
 
-      {/* Button */}
+        </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-6 rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
-      >
+      </form>
 
-        {loading
-          ? "Asignando..."
-          : "Asignar activo"}
-
-      </button>
-
-    </form>
+    </div>
   );
 }

@@ -1,13 +1,20 @@
-import { NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 import { prisma } from "@/lib/prisma";
 
 
-// PUT - Actualizar empleado
+// =========================
+// UPDATE EMPLOYEE
+// =========================
 
 export async function PUT(
-  req: Request,
-  context: {
+  req: NextRequest,
+  {
+    params,
+  }: {
     params: Promise<{
       id: string;
     }>;
@@ -16,23 +23,32 @@ export async function PUT(
 
   try {
 
-    const body = await req.json();
+    // IMPORTANTE:
+    // Next.js 16 requiere await params
 
     const { id } =
-      await context.params;
+      await params;
 
-    const employee =
+    const body =
+      await req.json();
+
+    const updatedEmployee =
       await prisma.employee.update({
+
         where: {
           id,
         },
 
         data: {
-          name: body.name,
 
-          email: body.email,
+          name:
+            body.name,
 
-          phone: body.phone,
+          email:
+            body.email,
+
+          phone:
+            body.phone,
 
           position:
             body.position,
@@ -43,7 +59,7 @@ export async function PUT(
       });
 
     return NextResponse.json(
-      employee
+      updatedEmployee
     );
 
   } catch (error) {
@@ -63,11 +79,15 @@ export async function PUT(
 }
 
 
-// DELETE - Eliminar empleado
+// =========================
+// DELETE EMPLOYEE
+// =========================
 
 export async function DELETE(
-  req: Request,
-  context: {
+  req: NextRequest,
+  {
+    params,
+  }: {
     params: Promise<{
       id: string;
     }>;
@@ -76,18 +96,21 @@ export async function DELETE(
 
   try {
 
+    // IMPORTANTE:
+    // Next.js 16 requiere await params
+
     const { id } =
-      await context.params;
+      await params;
 
     await prisma.employee.delete({
+
       where: {
         id,
       },
     });
 
     return NextResponse.json({
-      message:
-        "Empleado eliminado",
+      ok: true,
     });
 
   } catch (error) {

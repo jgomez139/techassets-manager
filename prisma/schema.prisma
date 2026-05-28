@@ -23,7 +23,8 @@ datasource db {
 enum UserRole {
   ADMIN
   TECHNICIAN
-  VIEWER
+  EMPLOYEE
+  SUPERVISOR
 }
 
 enum AssetStatus {
@@ -70,20 +71,27 @@ enum DisposalReason {
 // ======================================================
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  password     String
-  role         UserRole @default(VIEWER)
-  phone        String?
-  avatar       String?
+  id String @id @default(cuid())
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  name String
 
-  // Relaciones
+  email String @unique
+
+  password String
+
+  role UserRole @default(EMPLOYEE)
+
+  phone String?
+
+  avatar String?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
   refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
+
+  auditLogs AuditLog[]
 
   @@map("users")
 }
@@ -110,9 +118,9 @@ model Category {
 // ======================================================
 
 model Employee {
-  id         String  @id @default(cuid())
+  id         String @id @default(cuid())
   name       String
-  email      String  @unique
+  email      String @unique
   phone      String?
   position   String
   department String?
@@ -120,8 +128,9 @@ model Employee {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignments Assignment[]
-  loans       Loan[]
+  assignments  Assignment[]
+  loans        Loan[]
+  maintenances Maintenance[]
 
   @@map("employees")
 }
@@ -240,25 +249,24 @@ model Assignment {
 model Maintenance {
   id String @id @default(cuid())
 
-  // Relación activo
   assetId String
   asset Asset @relation(fields: [assetId], references: [id])
 
-  // Técnico responsable
-  technicianName String
+  technicianId String
+  technician Employee @relation(fields: [technicianId], references: [id])
 
-  // Tipo y estado
+  description String
+
+  maintenanceDate DateTime
+
   type MaintenanceType
+
   status MaintenanceStatus @default(PENDING)
 
-  // Información mantenimiento
-  description String
-  maintenanceDate DateTime
   cost Float?
-  observations String?
 
-  // Fechas sistema
   createdAt DateTime @default(now())
+
   updatedAt DateTime @updatedAt
 
   @@map("maintenances")

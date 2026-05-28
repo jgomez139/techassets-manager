@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import AssetForm from "@/components/assets/asset-form";
 
@@ -42,6 +46,7 @@ interface Asset {
 
   category: {
     id: string;
+
     name: string;
   };
 }
@@ -67,16 +72,26 @@ export default function AssetsPage() {
       setLoading(true);
 
       const res = await fetch(
-        "/api/assets"
+        "/api/assets",
+        {
+          credentials: "include",
+        }
       );
 
-      const data = await res.json();
+      const data =
+        await res.json();
 
-      setAssets(data);
+      setAssets(
+        Array.isArray(data)
+          ? data
+          : []
+      );
 
     } catch (error) {
 
       console.error(error);
+
+      setAssets([]);
 
     } finally {
 
@@ -100,10 +115,14 @@ export default function AssetsPage() {
         `/api/assets/${id}`,
         {
           method: "DELETE",
+
+          credentials:
+            "include",
         }
       );
 
       if (!res.ok) {
+
         throw new Error();
       }
 
@@ -120,26 +139,30 @@ export default function AssetsPage() {
   }
 
   useEffect(() => {
+
     getAssets();
+
   }, []);
 
   const filteredAssets =
     useMemo(() => {
 
-      return assets.filter((asset) => {
+      return assets.filter(
+        (asset) => {
 
-        const text = `
-          ${asset.name}
-          ${asset.brand}
-          ${asset.model}
-          ${asset.serialNumber}
-          ${asset.inventoryCode}
-        `.toLowerCase();
+          const text = `
+            ${asset.name}
+            ${asset.brand}
+            ${asset.model}
+            ${asset.serialNumber}
+            ${asset.inventoryCode}
+          `.toLowerCase();
 
-        return text.includes(
-          search.toLowerCase()
-        );
-      });
+          return text.includes(
+            search.toLowerCase()
+          );
+        }
+      );
 
     }, [assets, search]);
 
@@ -148,13 +171,16 @@ export default function AssetsPage() {
 
   const inUseAssets =
     assets.filter(
-      (a) => a.status === "IN_USE"
+      (a) =>
+        a.status ===
+        "IN_USE"
     ).length;
 
   const storageAssets =
     assets.filter(
       (a) =>
-        a.status === "IN_STORAGE"
+        a.status ===
+        "IN_STORAGE"
     ).length;
 
   const repairAssets =
@@ -243,7 +269,9 @@ export default function AssetsPage() {
 
       <AssetForm
         onSaved={getAssets}
-        editingAsset={editingAsset}
+        editingAsset={
+          editingAsset
+        }
         clearEditing={() =>
           setEditingAsset(null)
         }
@@ -311,7 +339,8 @@ export default function AssetsPage() {
 
           </div>
 
-        ) : filteredAssets.length === 0 ? (
+        ) : filteredAssets.length ===
+          0 ? (
 
           <div className="py-10 text-center">
 
@@ -391,7 +420,8 @@ export default function AssetsPage() {
 
                       <td className="p-4">
                         {
-                          asset.category.name
+                          asset.category
+                            .name
                         }
                       </td>
 
@@ -433,7 +463,9 @@ export default function AssetsPage() {
                             }
                             className="rounded-lg bg-blue-500 px-4 py-2 text-white transition hover:bg-blue-600"
                           >
+
                             Editar
+
                           </button>
 
                           <button
@@ -444,7 +476,9 @@ export default function AssetsPage() {
                             }
                             className="rounded-lg bg-red-500 px-4 py-2 text-white transition hover:bg-red-600"
                           >
+
                             Eliminar
+
                           </button>
 
                         </div>

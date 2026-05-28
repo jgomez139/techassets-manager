@@ -6,6 +6,8 @@ import {
   useState,
 } from "react";
 
+import { useRouter } from "next/navigation";
+
 import { toast } from "sonner";
 
 import AssignmentForm from "@/components/assignments/assignment-form";
@@ -34,6 +36,9 @@ interface Assignment {
 
 export default function AssignmentsPage() {
 
+  const router =
+    useRouter();
+
   const [
     assignments,
     setAssignments,
@@ -43,6 +48,9 @@ export default function AssignmentsPage() {
 
   const [loading, setLoading] =
     useState(true);
+
+  const [unauthorized, setUnauthorized] =
+    useState(false);
 
   const [search, setSearch] =
     useState("");
@@ -55,17 +63,57 @@ export default function AssignmentsPage() {
       setLoading(true);
 
       const res = await fetch(
-        "/api/assignments"
+        "/api/assignments",
+        {
+          credentials:
+            "include",
+        }
       );
+
+      // =========================
+      // PROTECCIÓN REAL
+      // =========================
+
+      if (
+        res.status === 401
+      ) {
+
+        router.push("/login");
+
+        return;
+      }
+
+      if (
+        res.status === 403
+      ) {
+
+        setUnauthorized(
+          true
+        );
+
+        return;
+      }
 
       const data =
         await res.json();
+
+      // Evita errores si API devuelve objeto
+      if (
+        !Array.isArray(data)
+      ) {
+
+        setAssignments([]);
+
+        return;
+      }
 
       setAssignments(data);
 
     } catch (error) {
 
       console.error(error);
+
+      setAssignments([]);
 
     } finally {
 
@@ -84,10 +132,34 @@ export default function AssignmentsPage() {
         `/api/assignments/${id}`,
         {
           method: "PUT",
+
+          credentials:
+            "include",
         }
       );
 
+      if (
+        res.status === 401
+      ) {
+
+        router.push("/login");
+
+        return;
+      }
+
+      if (
+        res.status === 403
+      ) {
+
+        toast.error(
+          "No tienes permisos"
+        );
+
+        return;
+      }
+
       if (!res.ok) {
+
         throw new Error();
       }
 
@@ -124,10 +196,34 @@ export default function AssignmentsPage() {
         `/api/assignments/${id}`,
         {
           method: "DELETE",
+
+          credentials:
+            "include",
         }
       );
 
+      if (
+        res.status === 401
+      ) {
+
+        router.push("/login");
+
+        return;
+      }
+
+      if (
+        res.status === 403
+      ) {
+
+        toast.error(
+          "No tienes permisos"
+        );
+
+        return;
+      }
+
       if (!res.ok) {
+
         throw new Error();
       }
 
@@ -149,7 +245,9 @@ export default function AssignmentsPage() {
 
 
   useEffect(() => {
+
     getAssignments();
+
   }, []);
 
 
@@ -173,6 +271,37 @@ export default function AssignmentsPage() {
     }, [assignments, search]);
 
 
+  // =========================
+  // SIN PERMISOS
+  // =========================
+
+  if (unauthorized) {
+
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+
+        <div className="rounded-2xl bg-white p-10 shadow">
+
+          <h1 className="mb-3 text-3xl font-bold text-red-600">
+
+            Acceso denegado
+
+          </h1>
+
+          <p className="text-gray-600">
+
+            No tienes permisos para acceder
+            a asignaciones.
+
+          </p>
+
+        </div>
+
+      </div>
+    );
+  }
+
+
   return (
     <div className="space-y-6">
 
@@ -181,11 +310,15 @@ export default function AssignmentsPage() {
       <div>
 
         <h1 className="text-3xl font-bold">
+
           Asignaciones
+
         </h1>
 
         <p className="text-gray-500">
+
           Gestión de asignaciones de activos
+
         </p>
 
       </div>
@@ -197,11 +330,15 @@ export default function AssignmentsPage() {
         <div className="rounded-2xl bg-white p-6 shadow">
 
           <p className="text-sm text-gray-500">
+
             Total asignaciones
+
           </p>
 
           <h2 className="mt-2 text-3xl font-bold">
+
             {assignments.length}
+
           </h2>
 
         </div>
@@ -225,11 +362,15 @@ export default function AssignmentsPage() {
           <div>
 
             <h2 className="text-xl font-semibold">
+
               Lista de asignaciones
+
             </h2>
 
             <p className="text-sm text-gray-500">
+
               Administración de activos asignados
+
             </p>
 
           </div>

@@ -2,8 +2,28 @@ import { prisma } from "@/lib/prisma";
 
 import { NextResponse } from "next/server";
 
+import { requireRole } from "@/lib/auth";
 
 export async function GET() {
+
+  const auth =
+    await requireRole([
+      "ADMIN",
+      "SUPERVISOR",
+    ]);
+
+  if ("error" in auth) {
+
+    return NextResponse.json(
+      {
+        error: auth.error,
+      },
+      {
+        status:
+          auth.status,
+      }
+    );
+  }
 
   try {
 
@@ -17,7 +37,8 @@ export async function GET() {
         },
 
         orderBy: {
-          createdAt: "desc",
+          assignedAt:
+            "desc",
         },
       });
 
@@ -34,73 +55,53 @@ export async function GET() {
         error:
           "Error obteniendo asignaciones",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
 
-
 export async function POST(
   req: Request
 ) {
+
+  const auth =
+    await requireRole([
+      "ADMIN",
+      "SUPERVISOR",
+    ]);
+
+  if ("error" in auth) {
+
+    return NextResponse.json(
+      {
+        error: auth.error,
+      },
+      {
+        status:
+          auth.status,
+      }
+    );
+  }
 
   try {
 
     const body =
       await req.json();
 
-    const {
-      assetId,
-      employeeId,
-      notes,
-    } = body;
-
-    // Validar activo
-
-    const asset =
-      await prisma.asset.findUnique({
-        where: {
-          id: assetId,
-        },
-      });
-
-    if (!asset) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Activo no encontrado",
-        },
-        { status: 404 }
-      );
-    }
-
-    // Verificar disponibilidad
-
-    if (
-      asset.status !==
-      "IN_STORAGE"
-    ) {
-
-      return NextResponse.json(
-        {
-          error:
-            "El activo no está disponible",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Crear asignación
-
     const assignment =
       await prisma.assignment.create({
+
         data: {
-          assetId,
+          assetId:
+            body.assetId,
 
-          employeeId,
+          employeeId:
+            body.employeeId,
 
-          notes,
+          notes:
+            body.notes,
         },
 
         include: {
@@ -110,17 +111,17 @@ export async function POST(
         },
       });
 
-    // Cambiar estado activo
-
     await prisma.asset.update({
-      where: {
-        id: assetId,
-      },
 
-      data: {
-        status: "IN_USE",
-      },
-    });
+        where: {
+          id: body.assetId,
+        },
+
+        data: {
+          status:
+            "IN_USE",
+        },
+      });
 
     return NextResponse.json(
       assignment
@@ -135,7 +136,9 @@ export async function POST(
         error:
           "Error creando asignación",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }

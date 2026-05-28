@@ -1,23 +1,38 @@
-import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
+import { prisma } from "@/lib/prisma";
+
+
+// =========================
+// UPDATE ASSET
+// =========================
 
 export async function PUT(
-  req: Request,
-  { params }: RouteParams
+  req: NextRequest,
+  {
+    params,
+  }: {
+    params: Promise<{
+      id: string;
+    }>;
+  }
 ) {
+
   try {
 
-    const { id } = await params;
+    // IMPORTANTE:
+    // Next.js 16 requiere await params
 
-    const body = await req.json();
+    const { id } =
+      await params;
 
-    const asset =
+    const body =
+      await req.json();
+
+    const updatedAsset =
       await prisma.asset.update({
 
         where: {
@@ -25,11 +40,15 @@ export async function PUT(
         },
 
         data: {
-          name: body.name,
 
-          brand: body.brand,
+          name:
+            body.name,
 
-          model: body.model,
+          brand:
+            body.brand,
+
+          model:
+            body.model,
 
           serialNumber:
             body.serialNumber,
@@ -37,13 +56,11 @@ export async function PUT(
           inventoryCode:
             body.inventoryCode,
 
-          status: body.status,
-
           description:
             body.description,
 
-          categoryId:
-            body.categoryId,
+          status:
+            body.status,
 
           purchaseCost:
             body.purchaseCost
@@ -51,6 +68,9 @@ export async function PUT(
                   body.purchaseCost
                 )
               : null,
+
+          categoryId:
+            body.categoryId,
         },
 
         include: {
@@ -58,7 +78,9 @@ export async function PUT(
         },
       });
 
-    return NextResponse.json(asset);
+    return NextResponse.json(
+      updatedAsset
+    );
 
   } catch (error) {
 
@@ -66,35 +88,49 @@ export async function PUT(
 
     return NextResponse.json(
       {
-        error: "Error actualizando activo",
+        error:
+          "Error actualizando activo",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
 
+
+// =========================
+// DELETE ASSET
+// =========================
+
 export async function DELETE(
-  req: Request,
-  { params }: RouteParams
+  req: NextRequest,
+  {
+    params,
+  }: {
+    params: Promise<{
+      id: string;
+    }>;
+  }
 ) {
+
   try {
 
-    const { id } = await params;
+    // IMPORTANTE:
+    // Next.js 16 requiere await params
 
-    await prisma.asset.update({
+    const { id } =
+      await params;
+
+    await prisma.asset.delete({
 
       where: {
         id,
       },
-
-      data: {
-        isDeleted: true,
-      },
     });
 
     return NextResponse.json({
-      message:
-        "Activo eliminado",
+      ok: true,
     });
 
   } catch (error) {
@@ -106,7 +142,9 @@ export async function DELETE(
         error:
           "Error eliminando activo",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }

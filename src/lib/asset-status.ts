@@ -1,29 +1,35 @@
-import { AssetStatus } from "@prisma/client";
+export const assetStatusLabels = {
 
-export const assetStatusLabels:
-  Record<AssetStatus, string> = {
+  AVAILABLE:
+    "Disponible",
 
-  IN_USE: "En uso",
+  ASSIGNED:
+    "Asignado",
 
-  IN_STORAGE: "En almacén",
+  UNDER_REPAIR:
+    "En reparación",
 
-  UNDER_REPAIR: "En reparación",
-
-  DISPOSED: "Dado de baja",
-};
-
-export const assetStatusColors:
-  Record<AssetStatus, string> = {
-
-  IN_USE:
-    "bg-green-100 text-green-700",
+  RETIRED:
+    "Retirado",
 
   IN_STORAGE:
+    "En almacén",
+};
+
+export const assetStatusColors = {
+
+  AVAILABLE:
+    "bg-green-100 text-green-700",
+
+  ASSIGNED:
     "bg-blue-100 text-blue-700",
 
   UNDER_REPAIR:
     "bg-yellow-100 text-yellow-700",
 
-  DISPOSED:
+  RETIRED:
     "bg-red-100 text-red-700",
+
+  IN_STORAGE:
+    "bg-gray-100 text-gray-700",
 };

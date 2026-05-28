@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { toast } from "sonner";
+
 import MaintenanceForm from "@/components/maintenances/maintenance-form";
 
 import {
@@ -9,7 +11,6 @@ import {
   maintenanceStatusLabels,
   maintenanceTypeLabels,
 } from "@/lib/maintenance-status";
-
 
 interface Maintenance {
   id: string;
@@ -31,7 +32,6 @@ interface Maintenance {
   };
 }
 
-
 export default function MaintenancesPage() {
 
   const [maintenances, setMaintenances] =
@@ -40,23 +40,52 @@ export default function MaintenancesPage() {
   const [loading, setLoading] =
     useState(true);
 
+  const [role, setRole] =
+    useState<string | null>(null);
 
   async function loadMaintenances() {
 
     try {
 
-      const res = await fetch(
-        "/api/maintenances"
-      );
+      setLoading(true);
+
+      const roleRes =
+        await fetch("/api/auth/me");
+
+      if (roleRes.ok) {
+
+        const roleData =
+          await roleRes.json();
+
+        setRole(roleData.role);
+      }
+
+      const res =
+        await fetch(
+          "/api/maintenances"
+        );
+
+      if (!res.ok) {
+
+        setMaintenances([]);
+
+        return;
+      }
 
       const data =
         await res.json();
 
-      setMaintenances(data);
+      setMaintenances(
+        Array.isArray(data)
+          ? data
+          : []
+      );
 
     } catch (error) {
 
       console.error(error);
+
+      setMaintenances([]);
 
     } finally {
 
@@ -64,28 +93,32 @@ export default function MaintenancesPage() {
     }
   }
 
-
   async function completeMaintenance(
     id: string
   ) {
 
     try {
 
-      const res = await fetch(
-        `/api/maintenances/${id}`,
-        {
-          method: "PATCH",
-        }
-      );
+      const res =
+        await fetch(
+          `/api/maintenances/${id}`,
+          {
+            method: "PATCH",
+          }
+        );
 
       if (!res.ok) {
 
-        alert(
+        toast.error(
           "Error completando mantenimiento"
         );
 
         return;
       }
+
+      toast.success(
+        "Mantenimiento completado"
+      );
 
       loadMaintenances();
 
@@ -93,17 +126,25 @@ export default function MaintenancesPage() {
 
       console.error(error);
 
-      alert(
+      toast.error(
         "Error completando mantenimiento"
       );
     }
   }
 
-
   useEffect(() => {
+
     loadMaintenances();
+
   }, []);
 
+  const canCreate =
+    role === "ADMIN" ||
+    role === "TECHNICIAN";
+
+  const canComplete =
+    role === "ADMIN" ||
+    role === "TECHNICIAN";
 
   return (
     <div className="space-y-6">
@@ -124,11 +165,14 @@ export default function MaintenancesPage() {
 
       {/* Formulario */}
 
-      <MaintenanceForm
-        onSaved={
-          loadMaintenances
-        }
-      />
+      {canCreate && (
+
+        <MaintenanceForm
+          onSaved={
+            loadMaintenances
+          }
+        />
+      )}
 
       {/* Tabla */}
 
@@ -288,8 +332,9 @@ export default function MaintenancesPage() {
 
                       <td className="p-3">
 
-                        {maintenance.status !==
-                          "COMPLETED" && (
+                        {canComplete &&
+                          maintenance.status !==
+                            "COMPLETED" && (
 
                           <button
                             onClick={() =>

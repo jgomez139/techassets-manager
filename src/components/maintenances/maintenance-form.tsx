@@ -1,75 +1,98 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import { toast } from "sonner";
 
-
 interface Asset {
   id: string;
-
   name: string;
-
-  status: string;
 }
 
+interface Employee {
+  id: string;
+  name: string;
+  position: string;
+}
 
-interface Props {
+interface MaintenanceFormProps {
   onSaved: () => void;
 }
 
-
 export default function MaintenanceForm({
   onSaved,
-}: Props) {
-
-  const [assets, setAssets] =
-    useState<Asset[]>([]);
+}: MaintenanceFormProps) {
 
   const [loading, setLoading] =
     useState(false);
 
-  const [formData, setFormData] =
+  const [assets, setAssets] =
+    useState<Asset[]>([]);
+
+  const [technicians, setTechnicians] =
+    useState<Employee[]>([]);
+
+  const [form, setForm] =
     useState({
+
       assetId: "",
 
-      technicianName: "",
-
-      type: "PREVENTIVE",
+      technicianId: "",
 
       description: "",
 
       maintenanceDate: "",
 
+      type: "PREVENTIVE",
+
       cost: "",
 
-      observations: "",
+      status: "PENDING",
     });
 
-
-  async function loadAssets() {
+  async function loadData() {
 
     try {
 
-      const res = await fetch(
-        "/api/assets"
-      );
+      const [
+        assetsRes,
+        employeesRes,
+      ] = await Promise.all([
 
-      const data =
-        await res.json();
+        fetch("/api/assets", {
+          credentials:
+            "include",
+        }),
 
-      // Excluir activos eliminados y dados de baja
+        fetch("/api/employees", {
+          credentials:
+            "include",
+        }),
+      ]);
 
-      const availableAssets =
-        data.filter(
-          (asset: any) =>
-            !asset.isDeleted &&
-            asset.status !==
-              "DISPOSED"
-        );
+      const assetsData =
+        await assetsRes.json();
+
+      const employeesData =
+        await employeesRes.json();
 
       setAssets(
-        availableAssets
+        Array.isArray(
+          assetsData
+        )
+          ? assetsData
+          : []
+      );
+
+      setTechnicians(
+        Array.isArray(
+          employeesData
+        )
+          ? employeesData
+          : []
       );
 
     } catch (error) {
@@ -77,33 +100,29 @@ export default function MaintenanceForm({
       console.error(error);
 
       toast.error(
-        "Error cargando activos"
+        "Error cargando datos"
       );
     }
   }
 
-
   useEffect(() => {
-    loadAssets();
+    loadData();
   }, []);
 
-
   function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement |
-      HTMLTextAreaElement |
-      HTMLSelectElement
-    >
+    e:
+      | React.ChangeEvent<HTMLInputElement>
+      | React.ChangeEvent<HTMLSelectElement>
+      | React.ChangeEvent<HTMLTextAreaElement>
   ) {
 
-    setFormData({
-      ...formData,
+    setForm({
+      ...form,
 
       [e.target.name]:
         e.target.value,
     });
   }
-
 
   async function handleSubmit(
     e: React.FormEvent
@@ -115,10 +134,22 @@ export default function MaintenanceForm({
 
       setLoading(true);
 
+      const payload = {
+
+        ...form,
+
+        cost: form.cost
+          ? Number(form.cost)
+          : null,
+      };
+
       const res = await fetch(
         "/api/maintenances",
         {
           method: "POST",
+
+          credentials:
+            "include",
 
           headers: {
             "Content-Type":
@@ -126,7 +157,7 @@ export default function MaintenanceForm({
           },
 
           body: JSON.stringify(
-            formData
+            payload
           ),
         }
       );
@@ -145,28 +176,27 @@ export default function MaintenanceForm({
       }
 
       toast.success(
-        "Mantenimiento registrado"
+        "Mantenimiento creado"
       );
 
-      setFormData({
+      setForm({
+
         assetId: "",
 
-        technicianName: "",
-
-        type: "PREVENTIVE",
+        technicianId: "",
 
         description: "",
 
         maintenanceDate: "",
 
+        type: "PREVENTIVE",
+
         cost: "",
 
-        observations: "",
+        status: "PENDING",
       });
 
       onSaved();
-
-      loadAssets();
 
     } catch (error) {
 
@@ -182,211 +212,209 @@ export default function MaintenanceForm({
     }
   }
 
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl bg-white p-8 shadow"
-    >
+    <div className="rounded-2xl bg-white p-6 shadow">
 
-      {/* Header */}
+      <h2 className="mb-6 text-xl font-bold">
 
-      <div className="mb-6">
+        Nuevo mantenimiento
 
-        <h2 className="text-2xl font-bold">
-          Nuevo mantenimiento
-        </h2>
+      </h2>
 
-        <p className="text-sm text-gray-500">
-          Registrar mantenimiento técnico
-        </p>
-
-      </div>
-
-      {/* Grid */}
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <form
+        onSubmit={
+          handleSubmit
+        }
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
+      >
 
         {/* Activo */}
 
-        <div>
+        <select
+          name="assetId"
+          value={
+            form.assetId
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        >
 
-          <label className="mb-2 block text-sm font-medium">
-            Activo
-          </label>
+          <option value="">
+            Seleccionar activo
+          </option>
 
-          <select
-            name="assetId"
-            value={formData.assetId}
-            onChange={handleChange}
-            className="w-full rounded-xl border p-3"
-            required
-          >
+          {assets.map(
+            (asset) => (
 
-            <option value="">
-              Seleccionar activo
-            </option>
+              <option
+                key={asset.id}
+                value={asset.id}
+              >
 
-            {assets.map(
-              (asset) => (
+                {asset.name}
 
-                <option
-                  key={asset.id}
-                  value={asset.id}
-                >
-                  {asset.name}
-                </option>
-              )
-            )}
+              </option>
+            )
+          )}
 
-          </select>
-
-        </div>
+        </select>
 
         {/* Técnico */}
 
-        <div>
+        <select
+          name="technicianId"
+          value={
+            form.technicianId
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        >
 
-          <label className="mb-2 block text-sm font-medium">
-            Técnico responsable
-          </label>
+          <option value="">
+            Seleccionar técnico
+          </option>
 
-          <input
-            type="text"
-            name="technicianName"
-            placeholder="Nombre técnico"
-            value={
-              formData.technicianName
-            }
-            onChange={handleChange}
-            className="w-full rounded-xl border p-3"
-            required
-          />
+          {technicians.map(
+            (
+              technician
+            ) => (
 
-        </div>
+              <option
+                key={
+                  technician.id
+                }
+                value={
+                  technician.id
+                }
+              >
+
+                {technician.name}
+
+              </option>
+            )
+          )}
+
+        </select>
 
         {/* Tipo */}
 
-        <div>
+        <select
+          name="type"
+          value={form.type}
+          onChange={
+            handleChange
+          }
+          className="rounded-xl border px-4 py-3"
+        >
 
-          <label className="mb-2 block text-sm font-medium">
-            Tipo mantenimiento
-          </label>
+          <option value="PREVENTIVE">
+            Preventivo
+          </option>
 
-          <select
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            className="w-full rounded-xl border p-3"
-          >
+          <option value="CORRECTIVE">
+            Correctivo
+          </option>
 
-            <option value="PREVENTIVE">
-              Preventivo
-            </option>
+        </select>
 
-            <option value="CORRECTIVE">
-              Correctivo
-            </option>
+        {/* Estado */}
 
-          </select>
+        <select
+          name="status"
+          value={
+            form.status
+          }
+          onChange={
+            handleChange
+          }
+          className="rounded-xl border px-4 py-3"
+        >
 
-        </div>
+          <option value="PENDING">
+            Pendiente
+          </option>
+
+          <option value="IN_PROGRESS">
+            En progreso
+          </option>
+
+          <option value="COMPLETED">
+            Completado
+          </option>
+
+        </select>
 
         {/* Fecha */}
 
-        <div>
-
-          <label className="mb-2 block text-sm font-medium">
-            Fecha mantenimiento
-          </label>
-
-          <input
-            type="date"
-            name="maintenanceDate"
-            value={
-              formData.maintenanceDate
-            }
-            onChange={handleChange}
-            className="w-full rounded-xl border p-3"
-            required
-          />
-
-        </div>
+        <input
+          type="date"
+          name="maintenanceDate"
+          value={
+            form.maintenanceDate
+          }
+          onChange={
+            handleChange
+          }
+          required
+          className="rounded-xl border px-4 py-3"
+        />
 
         {/* Costo */}
 
-        <div>
+        <input
+          type="number"
+          step="0.01"
+          name="cost"
+          placeholder="Costo"
+          value={form.cost}
+          onChange={
+            handleChange
+          }
+          className="rounded-xl border px-4 py-3"
+        />
 
-          <label className="mb-2 block text-sm font-medium">
-            Costo
-          </label>
-
-          <input
-            type="number"
-            name="cost"
-            placeholder="0"
-            value={formData.cost}
-            onChange={handleChange}
-            className="w-full rounded-xl border p-3"
-          />
-
-        </div>
-
-      </div>
-
-      {/* Descripción */}
-
-      <div className="mt-4">
-
-        <label className="mb-2 block text-sm font-medium">
-          Descripción
-        </label>
+        {/* Descripción */}
 
         <textarea
           name="description"
-          placeholder="Descripción mantenimiento..."
-          value={formData.description}
-          onChange={handleChange}
+          placeholder="Descripción"
+          value={
+            form.description
+          }
+          onChange={
+            handleChange
+          }
           rows={4}
-          className="w-full rounded-xl border p-3"
           required
+          className="rounded-xl border px-4 py-3 md:col-span-2"
         />
 
-      </div>
+        {/* Botón */}
 
-      {/* Observaciones */}
+        <div className="md:col-span-2">
 
-      <div className="mt-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
+          >
 
-        <label className="mb-2 block text-sm font-medium">
-          Observaciones
-        </label>
+            {loading
+              ? "Guardando..."
+              : "Crear mantenimiento"}
 
-        <textarea
-          name="observations"
-          placeholder="Observaciones..."
-          value={formData.observations}
-          onChange={handleChange}
-          rows={3}
-          className="w-full rounded-xl border p-3"
-        />
+          </button>
 
-      </div>
+        </div>
 
-      {/* Botón */}
+      </form>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-6 rounded-xl bg-black px-6 py-3 text-white transition hover:bg-gray-800 disabled:opacity-50"
-      >
-
-        {loading
-          ? "Guardando..."
-          : "Registrar mantenimiento"}
-
-      </button>
-
-    </form>
+    </div>
   );
 }

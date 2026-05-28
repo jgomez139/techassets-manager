@@ -1,82 +1,74 @@
-import { NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 import { prisma } from "@/lib/prisma";
 
-
-// PUT - Devolver activo
+/* =========================================
+   ACTUALIZAR ASIGNACIÓN
+========================================= */
 
 export async function PUT(
-  req: Request,
-  context: {
+  req: NextRequest,
+  {
+    params,
+  }: {
     params: Promise<{
       id: string;
     }>;
   }
 ) {
-
   try {
 
+    // Next.js 16
     const { id } =
-      await context.params;
+      await params;
 
-    // Buscar asignación
+    // Soportar body vacío
+    let body: any = {};
 
-    const assignment =
-      await prisma.assignment.findUnique({
-        where: {
-          id,
-        },
-      });
+    try {
 
-    if (!assignment) {
+      body =
+        await req.json();
 
-      return NextResponse.json(
-        {
-          error:
-            "Asignación no encontrada",
-        },
-        {
-          status: 404,
-        }
-      );
+    } catch {
+
+      body = {};
     }
 
-    // Actualizar asignación
-
-    const updatedAssignment =
+    const assignment =
       await prisma.assignment.update({
+
         where: {
           id,
         },
 
         data: {
+
           returnedAt:
-            new Date(),
+            body.returnedAt
+              ? new Date(
+                  body.returnedAt
+                )
+              : new Date(),
+
+          notes:
+            body.notes ??
+            undefined,
         },
 
         include: {
+
           asset: true,
 
           employee: true,
         },
       });
 
-    // Cambiar estado activo
-
-    await prisma.asset.update({
-      where: {
-        id:
-          assignment.assetId,
-      },
-
-      data: {
-        status:
-          "IN_STORAGE",
-      },
-    });
-
     return NextResponse.json(
-      updatedAssignment
+      assignment
     );
 
   } catch (error) {
@@ -86,7 +78,7 @@ export async function PUT(
     return NextResponse.json(
       {
         error:
-          "Error devolviendo activo",
+          "Error actualizando asignación",
       },
       {
         status: 500,
@@ -95,32 +87,35 @@ export async function PUT(
   }
 }
 
-
-// DELETE - Eliminar asignación
+/* =========================================
+   ELIMINAR ASIGNACIÓN
+========================================= */
 
 export async function DELETE(
-  req: Request,
-  context: {
+  req: NextRequest,
+  {
+    params,
+  }: {
     params: Promise<{
       id: string;
     }>;
   }
 ) {
-
   try {
 
+    // Next.js 16
     const { id } =
-      await context.params;
+      await params;
 
     await prisma.assignment.delete({
+
       where: {
         id,
       },
     });
 
     return NextResponse.json({
-      message:
-        "Asignación eliminada",
+      success: true,
     });
 
   } catch (error) {

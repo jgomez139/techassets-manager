@@ -1,86 +1,62 @@
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-import { NextResponse } from "next/server";
-
-
+// COMPLETAR MANTENIMIENTO
 export async function PATCH(
-  req: Request,
-  context: {
-    params: Promise<{
-      id: string;
-    }>;
-  }
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-
   try {
+    const { id } = await params;
 
-    const { id } =
-      await context.params;
-
-    // Buscar mantenimiento
-
-    const maintenance =
-      await prisma.maintenance.findUnique({
-
-        where: {
-          id,
-        },
-      });
-
-    if (!maintenance) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Mantenimiento no encontrado",
-        },
-        { status: 404 }
-      );
-    }
-
-    // Actualizar mantenimiento
-
-    const updatedMaintenance =
-      await prisma.maintenance.update({
-
-        where: {
-          id,
-        },
-
-        data: {
-          status:
-            "COMPLETED",
-        },
-      });
-
-    // Cambiar activo nuevamente a almacén
-
-    await prisma.asset.update({
-
+    const maintenance = await prisma.maintenance.update({
       where: {
-        id:
-          maintenance.assetId,
+        id,
       },
 
       data: {
-        status:
-          "IN_STORAGE",
+        status: "COMPLETED",
+      },
+
+      include: {
+        asset: true,
+        technician: true,
       },
     });
 
-    return NextResponse.json(
-      updatedMaintenance
-    );
-
+    return NextResponse.json(maintenance);
   } catch (error) {
-
     console.error(error);
 
     return NextResponse.json(
-      {
-        error:
-          "Error actualizando mantenimiento",
+      { error: "Error updating maintenance" },
+      { status: 500 }
+    );
+  }
+}
+
+// ELIMINAR MANTENIMIENTO
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    await prisma.maintenance.delete({
+      where: {
+        id,
       },
+    });
+
+    return NextResponse.json({
+      message: "Maintenance deleted",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Error deleting maintenance" },
       { status: 500 }
     );
   }
